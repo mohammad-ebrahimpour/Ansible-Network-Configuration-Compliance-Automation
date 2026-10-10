@@ -7,7 +7,6 @@
     report_dir: "{{ playbook_dir }}/../../reports"
 
   tasks:
-
     - name: Read FortiGate system status
       fortinet.fortios.fortios_monitor_fact:
         vdom: "{{ vdom }}"
@@ -30,7 +29,8 @@
             | selectattr('status', 'equalto', 'enable')
             | selectattr('action', 'equalto', 'accept')
             | selectattr('dstintf.0.name', 'equalto', 'port1')
-            | list | length > 0
+            | list
+            | length > 0
           }}
 
     - name: Evaluate Internet access
@@ -62,7 +62,7 @@
       ansible.builtin.copy:
         dest: "{{ report_dir }}/fortigate-01.json"
         mode: "0640"
-        content:
+        content: >-
           {{
             {
               "device": inventory_hostname,
@@ -83,19 +83,26 @@
                   "id": "FORTIGATE-SYSTEM-001",
                   "name": "System Status",
                   "desired": "AVAILABLE",
-                  "actual": "AVAILABLE" if fortigate_status.meta is defined else "UNAVAILABLE",
-                  "status": "COMPLIANT" if fortigate_status.meta is defined else "ERROR"
+                  "actual": "AVAILABLE"
+                    if fortigate_status.meta is defined
+                    else "UNAVAILABLE",
+                  "status": "COMPLIANT"
+                    if fortigate_status.meta is defined
+                    else "ERROR"
                 },
                 {
                   "id": "FORTIGATE-POLICY-001",
                   "name": "Firewall Policies",
                   "desired": "AVAILABLE",
-                  "actual": "AVAILABLE" if fortigate_policies.meta is defined else "UNAVAILABLE",
-                  "status": "COMPLIANT" if fortigate_policies.meta is defined else "ERROR"
+                  "actual": "AVAILABLE"
+                    if fortigate_policies.meta is defined
+                    else "UNAVAILABLE",
+                  "status": "COMPLIANT"
+                    if fortigate_policies.meta is defined
+                    else "ERROR"
                 }
               ]
-            }
-            | to_nice_json
+            } | to_nice_json
           }}
       delegate_to: localhost
 
