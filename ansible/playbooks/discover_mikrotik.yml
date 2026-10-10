@@ -1,0 +1,85 @@
+---
+- name: Discover MikroTik RouterOS
+  hosts: mikrotik
+  gather_facts: false
+
+  tasks:
+
+    - name: Collect MikroTik system identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: mikrotik_identity
+      changed_when: false
+
+    - name: Collect MikroTik system resource
+      community.routeros.command:
+        commands:
+          - /system resource print
+      register: mikrotik_resource
+      changed_when: false
+
+    - name: Collect MikroTik routerboard information
+      community.routeros.command:
+        commands:
+          - /system routerboard print
+      register: mikrotik_routerboard
+      changed_when: false
+
+    - name: Collect MikroTik interfaces
+      community.routeros.command:
+        commands:
+          - /interface print
+      register: mikrotik_interfaces
+      changed_when: false
+
+    - name: Collect MikroTik IP addresses
+      community.routeros.command:
+        commands:
+          - /ip address print
+      register: mikrotik_addresses
+      changed_when: false
+
+    - name: Collect MikroTik routes
+      community.routeros.command:
+        commands:
+          - /ip route print
+      register: mikrotik_routes
+      changed_when: false
+
+    - name: Validate MikroTik discovery
+      ansible.builtin.assert:
+        that:
+          - mikrotik_identity.stdout is defined
+          - mikrotik_resource.stdout is defined
+          - mikrotik_routerboard.stdout is defined
+          - mikrotik_interfaces.stdout is defined
+          - mikrotik_addresses.stdout is defined
+          - mikrotik_routes.stdout is defined
+        fail_msg: "MikroTik discovery failed."
+        success_msg: "MikroTik discovery completed successfully."
+
+    - name: Report MikroTik discovery
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "MikroTik Discovery"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: MikroTik"
+          - "Platform: RouterOS"
+          - "Management IP: {{ device_management_ip }}"
+          - "Status: SUCCESS"
+          - "=========================================="
+          - "Identity:"
+          - "{{ mikrotik_identity.stdout[0] }}"
+          - "System Resource:"
+          - "{{ mikrotik_resource.stdout[0] }}"
+          - "RouterBoard:"
+          - "{{ mikrotik_routerboard.stdout[0] }}"
+          - "Interfaces:"
+          - "{{ mikrotik_interfaces.stdout[0] }}"
+          - "IP Addresses:"
+          - "{{ mikrotik_addresses.stdout[0] }}"
+          - "Routes:"
+          - "{{ mikrotik_routes.stdout[0] }}"

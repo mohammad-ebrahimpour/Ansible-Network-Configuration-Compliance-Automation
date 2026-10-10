@@ -1,0 +1,64 @@
+---
+- name: Common Compliance - MikroTik
+  hosts: mikrotik
+  gather_facts: false
+
+  vars:
+    desired_identity: "AnsibleMikrotik"
+
+  tasks:
+
+    - name: Read MikroTik identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: identity_output
+      changed_when: false
+
+    - name: Parse MikroTik identity
+      ansible.builtin.set_fact:
+        actual_identity: >-
+          {{
+            identity_output.stdout_lines[0]
+            | join('')
+            | regex_replace('^name:', '')
+            | regex_replace('[^A-Za-z0-9._-]', '')
+          }}
+
+    - name: Evaluate MikroTik identity
+      ansible.builtin.set_fact:
+        compliance_status: >-
+          {{
+            'COMPLIANT'
+            if actual_identity == desired_identity
+            else 'DRIFT'
+          }}
+
+    - name: Build common compliance result
+      ansible.builtin.set_fact:
+        common_compliance_result:
+          device: "{{ inventory_hostname }}"
+          vendor: "MikroTik"
+          platform: "RouterOS"
+          status: "{{ compliance_status }}"
+          controls:
+            - id: "MIKROTIK-IDENTITY-001"
+              name: "Router Identity"
+              desired: "{{ desired_identity }}"
+              actual: "{{ actual_identity }}"
+              status: "{{ compliance_status }}"
+
+    - name: Report common compliance result
+      ansible.builtin.debug:
+        var: common_compliance_result
+
+    - name: Validate common compliance schema
+      ansible.builtin.assert:
+        that:
+          - common_compliance_result.device is defined
+          - common_compliance_result.vendor is defined
+          - common_compliance_result.platform is defined
+          - common_compliance_result.status is defined
+          - common_compliance_result.controls is defined
+        fail_msg: "Invalid common compliance result."
+        success_msg: "MikroTik common compliance result is valid."

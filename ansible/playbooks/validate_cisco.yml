@@ -1,0 +1,38 @@
+---
+- name: Validate Cisco IOS desired state
+  hosts: cisco
+  gather_facts: false
+
+  vars_files:
+    - ../desired_state/cisco.yml
+
+  tasks:
+
+    - name: Read final Cisco SSH status
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: final_ssh_status
+      changed_when: false
+
+    - name: Validate Cisco SSH version
+      ansible.builtin.assert:
+        that:
+          - >-
+            (
+              'SSH Enabled - version 2.0'
+              in final_ssh_status.stdout[0]
+            )
+        fail_msg: >-
+          Cisco validation FAILED.
+          SSH version 2 is not active.
+        success_msg: >-
+          Cisco SSH version 2 validation PASSED.
+
+    - name: Report Cisco validation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Cisco"
+          - "Desired SSH version: {{ desired_state.ssh.version }}"
+          - "Validation: PASSED"

@@ -1,0 +1,54 @@
+---
+desired_state:
+  vendor: mikrotik
+  platform: routeros
+
+  identity:
+    name: "AnsibleMikrotik"
+
+  firewall:
+    baseline:
+      - name: allow-established-related-input
+        comment: "accept established related"
+        chain: input
+        action: accept
+        connection-state:
+          - established
+          - related
+
+      - name: drop-invalid-input
+        comment: "drop invalid"
+        chain: input
+        action: drop
+        connection-state:
+          - invalid
+
+      - name: allow-established-related-forward
+        comment: "accept established related forward"
+        chain: forward
+        action: accept
+        connection-state:
+          - established
+          - related
+
+      - name: drop-invalid-forward
+        comment: "drop-invalid-forward"
+        chain: forward
+        action: drop
+        connection-state:
+          - invalid
+        place-before-comment: "drop WAN input"
+
+      - name: drop-wan-input
+        comment: "drop WAN input"
+        chain: input
+        action: drop
+        in-interface: ether1
+
+      - name: drop-new-wan-forward
+        comment: "drop new WAN forward"
+        chain: forward
+        action: drop
+        connection-state:
+          - new
+        in-interface: ether1

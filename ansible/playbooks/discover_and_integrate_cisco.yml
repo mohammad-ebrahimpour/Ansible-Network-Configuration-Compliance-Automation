@@ -1,0 +1,55 @@
+---
+- name: Integrated Cisco discovery
+  hosts: cisco
+  gather_facts: false
+
+  tasks:
+
+    - name: Collect version
+      cisco.ios.ios_command:
+        commands:
+          - show version
+      register: version
+      changed_when: false
+
+    - name: Collect hostname
+      cisco.ios.ios_command:
+        commands:
+          - show running-config | include ^hostname
+      register: hostname
+      changed_when: false
+
+    - name: Collect interfaces
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+      register: interfaces
+      changed_when: false
+
+    - name: Collect routes
+      cisco.ios.ios_command:
+        commands:
+          - show ip route
+      register: routes
+      changed_when: false
+
+    - name: Collect SSH status
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: ssh
+      changed_when: false
+
+    - name: Build normalized discovery record
+      ansible.builtin.set_fact:
+        normalized_device:
+          device: "{{ inventory_hostname }}"
+          vendor: "Cisco"
+          platform: "IOS"
+          management_ip: "{{ device_management_ip }}"
+          hostname: "{{ hostname.stdout[0] | trim }}"
+          discovered: true
+
+    - name: Display normalized discovery
+      ansible.builtin.debug:
+        var: normalized_device

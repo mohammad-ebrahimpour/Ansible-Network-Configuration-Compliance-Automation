@@ -1,0 +1,41 @@
+---
+- name: Remediate FortiGate configuration
+  hosts: fortigate
+  gather_facts: false
+
+  tasks:
+
+    - name: Disable FortiGate LAN to Internet policy
+      fortinet.fortios.fortios_firewall_policy:
+        vdom: "{{ vdom }}"
+        state: present
+        access_token: "{{ vault_fortigate_api_token | default(omit) }}"
+        firewall_policy:
+          policyid: 1
+          status: disable
+
+    - name: Read FortiGate firewall policy after remediation
+      fortinet.fortios.fortios_configuration_fact:
+        vdom: "{{ vdom }}"
+        selector: firewall_policy
+      register: fortigate_policies
+      changed_when: false
+
+    - name: Verify FortiGate policies were collected
+      ansible.builtin.assert:
+        that:
+          - fortigate_policies.meta is defined
+        fail_msg: "FortiGate firewall policies could not be read."
+        success_msg: "FortiGate firewall policies successfully read."
+
+    - name: Report FortiGate remediation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Fortinet"
+          - "Platform: FortiOS"
+          - "VDOM: {{ vdom }}"
+          - "Policy ID: 1"
+          - "Action: DISABLE"
+          - "Desired state: Internet access disabled"
+          - "Status: REMEDIATION APPLIED"

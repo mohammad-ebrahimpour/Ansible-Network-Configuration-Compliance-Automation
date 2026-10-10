@@ -1,0 +1,17 @@
+---
+# ============================================================
+# FortiGate - Device Identity
+# ============================================================
+
+device_vendor: fortigate
+device_platform: fortios
+device_role: firewall
+
+device_management_ip: 192.168.203.2
+
+management_protocol: https
+
+automation_enabled: true
+
+# Hard project constraint.
+fortigate_internet_access: false

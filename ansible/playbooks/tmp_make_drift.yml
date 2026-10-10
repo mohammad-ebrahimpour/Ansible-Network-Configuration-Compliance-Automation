@@ -1,0 +1,13 @@
+---
+- name: Make FortiGate drift (test only)
+  hosts: fortigate
+  gather_facts: false
+  tasks:
+    - name: Enable policy 1 as accept
+      fortinet.fortios.fortios_firewall_policy:
+        vdom: "{{ vdom }}"
+        state: present
+        firewall_policy:
+          policyid: 1
+          status: enable
+          action: accept

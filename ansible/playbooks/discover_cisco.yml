@@ -1,0 +1,85 @@
+---
+- name: Discover Cisco IOS
+  hosts: cisco
+  gather_facts: false
+
+  tasks:
+
+    - name: Collect Cisco version
+      cisco.ios.ios_command:
+        commands:
+          - show version
+      register: cisco_version
+      changed_when: false
+
+    - name: Collect Cisco hostname
+      cisco.ios.ios_command:
+        commands:
+          - show running-config | include ^hostname
+      register: cisco_hostname
+      changed_when: false
+
+    - name: Collect Cisco interface status
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+      register: cisco_interfaces
+      changed_when: false
+
+    - name: Collect Cisco interface descriptions
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces description
+      register: cisco_interface_description
+      changed_when: false
+
+    - name: Collect Cisco routing table
+      cisco.ios.ios_command:
+        commands:
+          - show ip route
+      register: cisco_routes
+      changed_when: false
+
+    - name: Collect Cisco SSH status
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: cisco_ssh
+      changed_when: false
+
+    - name: Validate Cisco discovery
+      ansible.builtin.assert:
+        that:
+          - cisco_version.stdout is defined
+          - cisco_hostname.stdout is defined
+          - cisco_interfaces.stdout is defined
+          - cisco_interface_description.stdout is defined
+          - cisco_routes.stdout is defined
+          - cisco_ssh.stdout is defined
+        fail_msg: "Cisco discovery failed."
+        success_msg: "Cisco discovery completed successfully."
+
+    - name: Report Cisco discovery
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Cisco IOS Discovery"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Cisco"
+          - "Platform: IOS"
+          - "Management IP: {{ device_management_ip }}"
+          - "Status: SUCCESS"
+          - "=========================================="
+          - "Version:"
+          - "{{ cisco_version.stdout[0] }}"
+          - "Hostname:"
+          - "{{ cisco_hostname.stdout[0] }}"
+          - "Interfaces:"
+          - "{{ cisco_interfaces.stdout[0] }}"
+          - "Interface Description:"
+          - "{{ cisco_interface_description.stdout[0] }}"
+          - "Routes:"
+          - "{{ cisco_routes.stdout[0] }}"
+          - "SSH:"
+          - "{{ cisco_ssh.stdout[0] }}"

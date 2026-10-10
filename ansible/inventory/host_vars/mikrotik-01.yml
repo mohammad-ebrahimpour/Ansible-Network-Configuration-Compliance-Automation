@@ -1,0 +1,16 @@
+---
+# ============================================================
+# MikroTik - Device Identity
+# ============================================================
+
+device_vendor: mikrotik
+device_platform: routeros
+device_role: router
+
+device_management_ip: "{{ mikrotik_public_ip }}"
+
+# Existing v1.1 RouterOS compliance engine.
+firewall_engine: routeros
+
+# Stage 1 inventory classification.
+automation_enabled: true

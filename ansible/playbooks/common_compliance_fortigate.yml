@@ -1,0 +1,119 @@
+---
+- name: Common Compliance - FortiGate
+  hosts: fortigate
+  gather_facts: false
+
+  tasks:
+
+    - name: Read FortiGate system status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "{{ vdom }}"
+        selector: system_status
+      register: fortigate_status
+      changed_when: false
+
+    - name: Collect FortiGate firewall policies
+      fortinet.fortios.fortios_configuration_fact:
+        vdom: "{{ vdom }}"
+        selector: firewall_policy
+      register: fortigate_policies
+      changed_when: false
+
+    - name: Check if an Internet policy is open
+      ansible.builtin.set_fact:
+        internet_open: >-
+          {{
+            fortigate_policies.meta.results
+            | selectattr('status', 'equalto', 'enable')
+            | selectattr('action', 'equalto', 'accept')
+            | selectattr('dstintf.0.name', 'equalto', 'port1')
+            | list | length > 0
+          }}
+    - name: Evaluate Internet access
+      ansible.builtin.set_fact:
+        internet_access_compliant: "{{ not internet_open }}"
+
+    - name: Build FortiGate control results
+      ansible.builtin.set_fact:
+        fortigate_controls:
+          - id: "FORTIGATE-INTERNET-001"
+            name: "Internet Access"
+            desired: false
+            actual: "{{ internet_open }}"
+            status: >-
+              {{
+                'COMPLIANT'
+                if not (internet_open)
+                else 'DRIFT'
+              }}
+
+          - id: "FORTIGATE-SYSTEM-001"
+            name: "System Status Collection"
+            desired: "AVAILABLE"
+            actual: >-
+              {{
+                'AVAILABLE'
+                if fortigate_status.meta is defined
+                else 'UNAVAILABLE'
+              }}
+            status: >-
+              {{
+                'COMPLIANT'
+                if fortigate_status.meta is defined
+                else 'ERROR'
+              }}
+
+          - id: "FORTIGATE-POLICY-001"
+            name: "Firewall Policy Collection"
+            desired: "AVAILABLE"
+            actual: >-
+              {{
+                'AVAILABLE'
+                if fortigate_policies.meta is defined
+                else 'UNAVAILABLE'
+              }}
+            status: >-
+              {{
+                'COMPLIANT'
+                if fortigate_policies.meta is defined
+                else 'ERROR'
+              }}
+
+    - name: Calculate FortiGate overall compliance
+      ansible.builtin.set_fact:
+        fortigate_compliance_status: >-
+          {{
+            'COMPLIANT'
+            if (
+              internet_access_compliant
+              and
+              fortigate_status.meta is defined
+              and
+              fortigate_policies.meta is defined
+            )
+            else 'DRIFT'
+          }}
+
+    - name: Build common compliance result
+      ansible.builtin.set_fact:
+        common_compliance_result:
+          device: "{{ inventory_hostname }}"
+          vendor: "Fortinet"
+          platform: "FortiOS"
+          status: "{{ fortigate_compliance_status }}"
+          controls: "{{ fortigate_controls }}"
+
+    - name: Report common compliance result
+      ansible.builtin.debug:
+        var: common_compliance_result
+
+    - name: Validate common compliance schema
+      ansible.builtin.assert:
+        that:
+          - common_compliance_result.device is defined
+          - common_compliance_result.vendor is defined
+          - common_compliance_result.platform is defined
+          - common_compliance_result.status is defined
+          - common_compliance_result.controls is defined
+        fail_msg: "Invalid common compliance result."
+        success_msg: "FortiGate common compliance result is valid."

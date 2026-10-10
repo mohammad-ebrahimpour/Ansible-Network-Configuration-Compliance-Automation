@@ -1,0 +1,20 @@
+---
+desired_state:
+  vendor: cisco
+  platform: ios
+
+  ssh:
+    enabled: true
+    version: 2
+
+  management:
+    protocol: ssh
+
+  controls:
+    - id: CISCO-SSH-001
+      name: SSH Enabled
+      desired: true
+
+    - id: CISCO-SSH-002
+      name: SSH Version
+      desired: 2

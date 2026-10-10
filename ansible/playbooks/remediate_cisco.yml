@@ -1,0 +1,45 @@
+---
+- name: Remediate Cisco IOS configuration
+  hosts: cisco
+  gather_facts: false
+
+  tasks:
+
+    - name: Read current SSH configuration
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: ssh_before
+      changed_when: false
+
+    - name: Configure SSH version 2
+      cisco.ios.ios_config:
+        lines:
+          - ip ssh version 2
+      when: "'SSH Enabled - version 2.0' not in ssh_before.stdout[0]"
+
+    - name: Read SSH configuration after remediation
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: ssh_after
+      changed_when: false
+
+    - name: Verify SSH version 2
+      ansible.builtin.assert:
+        that:
+          - "'SSH Enabled - version 2.0' in ssh_after.stdout[0]"
+        fail_msg: >-
+          Cisco remediation failed.
+          SSH version 2 is not active.
+        success_msg: >-
+          Cisco SSH version 2 is active.
+
+    - name: Report Cisco remediation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Cisco IOS"
+          - "Control: SSH Version"
+          - "Desired: 2"
+          - "Status: COMPLIANT"

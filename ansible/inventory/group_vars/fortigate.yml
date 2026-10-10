@@ -1,0 +1,19 @@
+---
+# ============================================================
+# FortiGate / FortiOS
+# ============================================================
+
+ansible_connection: ansible.netcommon.httpapi
+ansible_network_os: fortinet.fortios.fortios
+
+ansible_user: "{{ vault_fortigate_username }}"
+ansible_password: "{{ vault_fortigate_password }}"
+
+ansible_httpapi_use_ssl: true
+ansible_httpapi_validate_certs: false
+ansible_httpapi_port: 8080
+
+vdom: root
+
+# Project safety constraint.
+fortigate_internet_access: false

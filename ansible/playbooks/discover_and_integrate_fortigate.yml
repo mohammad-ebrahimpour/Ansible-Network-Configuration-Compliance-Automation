@@ -1,0 +1,36 @@
+---
+- name: Integrated FortiGate discovery
+  hosts: fortigate
+  gather_facts: false
+
+  tasks:
+
+    - name: Collect system status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "{{ vdom }}"
+        selector: system_status
+      register: system_status
+      changed_when: false
+
+    - name: Collect firewall policies
+      fortinet.fortios.fortios_configuration_fact:
+        vdom: "{{ vdom }}"
+        selector: firewall_policy
+      register: policies
+      changed_when: false
+
+    - name: Build normalized discovery record
+      ansible.builtin.set_fact:
+        normalized_device:
+          device: "{{ inventory_hostname }}"
+          vendor: "Fortinet"
+          platform: "FortiOS"
+          management_ip: "{{ device_management_ip }}"
+          vdom: "{{ vdom }}"
+          system_status_available: "{{ system_status.meta is defined }}"
+          policies_available: "{{ policies.meta is defined }}"
+          discovered: true
+
+    - name: Display normalized discovery
+      ansible.builtin.debug:
+        var: normalized_device
