@@ -76,7 +76,7 @@
                   "id": "FORTIGATE-INTERNET-001",
                   "name": "Internet Access",
                   "desired": false,
-                  "actual": :internet_open,
+                  "actual": internet_open,
                   "status": "COMPLIANT" if internet_compliant else "DRIFT"
                 },
                 {
