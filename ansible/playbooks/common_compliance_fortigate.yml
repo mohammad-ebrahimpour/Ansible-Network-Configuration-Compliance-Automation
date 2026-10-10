@@ -32,7 +32,7 @@
     - name: Evaluate Internet access
       ansible.builtin.set_fact:
         internet_access_compliant: "{{ not internet_open }}"
-        
+
     - name: Build FortiGate control results
       ansible.builtin.set_fact:
         fortigate_controls:
