@@ -1,0 +1,92 @@
+---
+- name: Apply MikroTik desired state
+  hosts: mikrotik
+  gather_facts: false
+
+  vars_files:
+    - ../desired_state/mikrotik.yml
+
+  tasks:
+
+    - name: Read current identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: current_identity
+      changed_when: false
+      check_mode: false
+
+    - name: Parse current identity
+      ansible.builtin.set_fact:
+        actual_identity: >-
+          {{
+            current_identity.stdout_lines[0]
+            | join('')
+            | regex_replace('^name:', '')
+            | regex_replace('[^A-Za-z0-9._-]', '')
+          }}
+
+    - name: Apply desired identity
+      community.routeros.command:
+        commands:
+          - '/system identity set name="{{ desired_state.identity.name }}"'
+      when:
+        - actual_identity != desired_state.identity.name
+
+    - name: Read identity after remediation
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: validated_identity
+      changed_when: false
+      when: not ansible_check_mode
+
+    - name: Parse validated identity
+      ansible.builtin.set_fact:
+        actual_validated_identity: >-
+          {{
+            validated_identity.stdout_lines[0]
+            | join('')
+            | regex_replace('^name:', '')
+            | regex_replace('[^A-Za-z0-9._-]', '')
+          }}
+      when: not ansible_check_mode
+
+    - name: Verify MikroTik desired state
+      ansible.builtin.assert:
+        that:
+          - >-
+            (
+              actual_validated_identity
+              if not ansible_check_mode
+              else actual_identity
+            )
+            == desired_state.identity.name
+        fail_msg: >-
+          MikroTik desired state validation failed.
+          Expected "{{ desired_state.identity.name }}",
+          got "{{
+            actual_validated_identity
+            if not ansible_check_mode
+            else actual_identity
+          }}"
+        success_msg: >-
+          MikroTik desired state is compliant:
+          {{
+            actual_validated_identity
+            if not ansible_check_mode
+            else actual_identity
+          }}
+
+    - name: Report MikroTik remediation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: MikroTik"
+          - "Desired identity: {{ desired_state.identity.name }}"
+          - "Actual identity: {{
+              actual_validated_identity
+              if not ansible_check_mode
+              else actual_identity
+            }}"
+          - "Status: COMPLIANT"

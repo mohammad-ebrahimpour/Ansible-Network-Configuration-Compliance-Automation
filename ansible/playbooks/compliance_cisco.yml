@@ -1,0 +1,92 @@
+---
+- name: Cisco IOS Configuration Compliance
+  hosts: cisco
+  gather_facts: false
+
+  tasks:
+    - name: Read Cisco SSH status
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: cisco_ssh_status
+      changed_when: false
+
+    - name: Read Cisco interface status
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+      register: cisco_interface_status
+      changed_when: false
+
+    - name: Determine Cisco SSH version compliance
+      ansible.builtin.set_fact:
+        cisco_ssh_version_compliant: >-
+          {{
+            'SSH Enabled - version 2.0'
+            in cisco_ssh_status.stdout[0]
+          }}
+
+    - name: Determine Cisco SSH availability
+      ansible.builtin.set_fact:
+        cisco_ssh_enabled: >-
+          {{
+            'SSH Enabled'
+            in cisco_ssh_status.stdout[0]
+          }}
+
+    - name: Determine Cisco interface availability
+      ansible.builtin.set_fact:
+        cisco_interfaces_available: >-
+          {{
+            cisco_interface_status.stdout[0] | length > 0
+          }}
+
+    - name: Report Cisco compliance
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Cisco IOS Compliance"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Cisco"
+          - "Platform: IOS"
+          - "=========================================="
+          - "Control: SSH Enabled"
+          - "Status: >-
+              {{
+                'COMPLIANT'
+                if cisco_ssh_enabled
+                else 'NON-COMPLIANT'
+              }}"
+          - "Control: SSH Version 2"
+          - "Status: >-
+              {{
+                'COMPLIANT'
+                if cisco_ssh_version_compliant
+                else 'NON-COMPLIANT'
+              }}"
+          - "Control: Interface Data Available"
+          - "Status: >-
+              {{
+                'COMPLIANT'
+                if cisco_interfaces_available
+                else 'NON-COMPLIANT'
+              }}"
+          - "=========================================="
+
+    - name: Assert Cisco SSH compliance
+      ansible.builtin.assert:
+        that:
+          - cisco_ssh_enabled
+          - cisco_ssh_version_compliant
+        fail_msg: >-
+          Cisco SSH compliance failed.
+          SSH must be enabled and configured for SSH version 2.
+        success_msg: "Cisco SSH compliance is COMPLIANT."
+
+    - name: Assert Cisco interface discovery
+      ansible.builtin.assert:
+        that:
+          - cisco_interfaces_available
+        fail_msg: "Cisco interface information could not be collected."
+        success_msg: "Cisco interface discovery is COMPLIANT."

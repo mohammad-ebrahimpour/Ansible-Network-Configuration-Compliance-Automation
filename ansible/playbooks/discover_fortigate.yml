@@ -1,0 +1,38 @@
+---
+- name: Discover FortiGate
+  hosts: fortigate
+  gather_facts: false
+
+  tasks:
+
+    - name: Collect FortiGate system status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "{{ vdom }}"
+        selector: system_status
+      register: fortigate_system_status
+      changed_when: false
+
+    - name: Validate FortiGate discovery
+      ansible.builtin.assert:
+        that:
+          - fortigate_system_status is defined
+          - fortigate_system_status.meta is defined
+        fail_msg: "FortiGate discovery failed."
+        success_msg: "FortiGate discovery completed successfully."
+
+    - name: Report FortiGate discovery
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "FortiGate Discovery"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Fortinet"
+          - "Platform: FortiOS"
+          - "Management IP: {{ device_management_ip }}"
+          - "VDOM: {{ vdom }}"
+          - "Internet Access: {{ fortigate_internet_access }}"
+          - "Status: SUCCESS"
+          - "=========================================="
+          - "System Status:"
+          - "{{ fortigate_system_status.meta }}"

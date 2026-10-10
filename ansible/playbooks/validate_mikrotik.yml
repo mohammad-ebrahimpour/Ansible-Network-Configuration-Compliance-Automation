@@ -1,0 +1,46 @@
+---
+- name: Validate MikroTik desired state
+  hosts: mikrotik
+  gather_facts: false
+
+  vars_files:
+    - ../desired_state/mikrotik.yml
+
+  tasks:
+
+    - name: Read final MikroTik identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: final_identity
+      changed_when: false
+
+    - name: Parse final identity
+      ansible.builtin.set_fact:
+        actual_identity: >-
+          {{
+            final_identity.stdout_lines[0]
+            | join('')
+            | regex_replace('^name:', '')
+            | regex_replace('[^A-Za-z0-9._-]', '')
+          }}
+
+    - name: Validate MikroTik identity
+      ansible.builtin.assert:
+        that:
+          - actual_identity == desired_state.identity.name
+        fail_msg: >-
+          MikroTik validation FAILED.
+          Expected "{{ desired_state.identity.name }}",
+          got "{{ actual_identity }}".
+        success_msg: >-
+          MikroTik validation PASSED.
+
+    - name: Report MikroTik validation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: MikroTik"
+          - "Desired: {{ desired_state.identity.name }}"
+          - "Actual: {{ actual_identity }}"
+          - "Validation: PASSED"

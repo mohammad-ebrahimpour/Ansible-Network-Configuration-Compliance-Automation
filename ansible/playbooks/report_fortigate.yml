@@ -1,0 +1,106 @@
+---
+- name: Generate FortiGate compliance report
+  hosts: fortigate
+  gather_facts: false
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports"
+
+  tasks:
+
+    - name: Read FortiGate system status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "{{ vdom }}"
+        selector: system_status
+      register: fortigate_status
+      changed_when: false
+
+    - name: Collect FortiGate firewall policies
+      fortinet.fortios.fortios_configuration_fact:
+        vdom: "{{ vdom }}"
+        selector: firewall_policy
+      register: fortigate_policies
+      changed_when: false
+
+    - name: Check if an Internet policy is open
+      ansible.builtin.set_fact:
+        internet_open: >-
+          {{
+            fortigate_policies.meta.results
+            | selectattr('status', 'equalto', 'enable')
+            | selectattr('action', 'equalto', 'accept')
+            | selectattr('dstintf.0.name', 'equalto', 'port1')
+            | list | length > 0
+          }}
+
+    - name: Evaluate Internet access
+      ansible.builtin.set_fact:
+        internet_compliant: "{{ not internet_open }}"
+
+    - name: Calculate FortiGate overall status
+      ansible.builtin.set_fact:
+        compliance_status: >-
+          {{
+            'COMPLIANT'
+            if (
+              internet_compliant
+              and fortigate_status.meta is defined
+              and fortigate_policies.meta is defined
+            )
+            else 'DRIFT'
+          }}
+
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0750"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Write FortiGate report
+      ansible.builtin.copy:
+        dest: "{{ report_dir }}/fortigate-01.json"
+        mode: "0640"
+        content: >-
+          {{
+            {
+              "device": inventory_hostname,
+              "vendor": "Fortinet",
+              "platform": "FortiOS",
+              "management_ip": device_management_ip,
+              "vdom": vdom,
+              "status": compliance_status,
+              "controls": [
+                {
+                  "id": "FORTIGATE-INTERNET-001",
+                  "name": "Internet Access",
+                  "desired": false,
+                  "actual": :(internet_open),
+                  "status": "COMPLIANT" if internet_compliant else "DRIFT"
+                },
+                {
+                  "id": "FORTIGATE-SYSTEM-001",
+                  "name": "System Status",
+                  "desired": "AVAILABLE",
+                  "actual": "AVAILABLE" if fortigate_status.meta is defined else "UNAVAILABLE",
+                  "status": "COMPLIANT" if fortigate_status.meta is defined else "ERROR"
+                },
+                {
+                  "id": "FORTIGATE-POLICY-001",
+                  "name": "Firewall Policies",
+                  "desired": "AVAILABLE",
+                  "actual": "AVAILABLE" if fortigate_policies.meta is defined else "UNAVAILABLE",
+                  "status": "COMPLIANT" if fortigate_policies.meta is defined else "ERROR"
+                }
+              ]
+            }
+            | to_nice_json
+          }}
+      delegate_to: localhost
+
+    - name: Display FortiGate report status
+      ansible.builtin.debug:
+        msg:
+          - "Report generated: reports/fortigate-01.json"
+          - "Status: {{ compliance_status }}"

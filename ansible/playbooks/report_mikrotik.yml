@@ -1,0 +1,76 @@
+---
+- name: Generate MikroTik compliance report
+  hosts: mikrotik
+  gather_facts: false
+
+  vars:
+    desired_identity: "AnsibleMikrotik"
+    report_dir: "{{ playbook_dir }}/../../reports"
+
+  tasks:
+
+    - name: Read MikroTik identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: identity_output
+      changed_when: false
+
+    - name: Parse MikroTik identity
+      ansible.builtin.set_fact:
+        actual_identity: >-
+          {{
+            identity_output.stdout_lines[0]
+            | join('')
+            | regex_replace('^name:', '')
+            | regex_replace('[^A-Za-z0-9._-]', '')
+          }}
+
+    - name: Calculate compliance status
+      ansible.builtin.set_fact:
+        compliance_status: >-
+          {{
+            'COMPLIANT'
+            if actual_identity == desired_identity
+            else 'DRIFT'
+          }}
+
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0750"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Write MikroTik report
+      ansible.builtin.copy:
+        dest: "{{ report_dir }}/mikrotik-01.json"
+        mode: "0640"
+        content: >-
+          {{
+            {
+              "device": inventory_hostname,
+              "vendor": "MikroTik",
+              "platform": "RouterOS",
+              "management_ip": device_management_ip,
+              "status": compliance_status,
+              "controls": [
+                {
+                  "id": "MIKROTIK-IDENTITY-001",
+                  "name": "Router Identity",
+                  "desired": desired_identity,
+                  "actual": actual_identity,
+                  "status": compliance_status
+                }
+              ]
+            }
+            | to_nice_json
+          }}
+      delegate_to: localhost
+
+    - name: Display MikroTik report status
+      ansible.builtin.debug:
+        msg:
+          - "Report generated: reports/mikrotik-01.json"
+          - "Status: {{ compliance_status }}"

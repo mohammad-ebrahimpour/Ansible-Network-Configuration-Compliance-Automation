@@ -1,0 +1,37 @@
+---
+- name: Apply Cisco IOS desired state
+  hosts: cisco
+  gather_facts: false
+
+  vars_files:
+    - ../desired_state/cisco.yml
+  tasks:
+    - name: Apply desired Cisco SSH configuration
+      cisco.ios.ios_config:
+        lines:
+          - "ip ssh version {{ desired_state.ssh.version }}"
+      when:
+        - desired_state.ssh.enabled | bool
+        - desired_state.ssh.version == 2
+
+    - name: Read SSH status after configuration
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: ssh_status
+      changed_when: false
+
+    - name: Validate Cisco desired state
+      ansible.builtin.assert:
+        that:
+          - "'SSH Enabled - version 2.0' in ssh_status.stdout[0]"
+        fail_msg: "Cisco desired state validation failed."
+        success_msg: "Cisco SSH desired state is compliant."
+
+    - name: Report Cisco remediation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Cisco"
+          - "SSH version: {{ desired_state.ssh.version }}"
+          - "Status: COMPLIANT"

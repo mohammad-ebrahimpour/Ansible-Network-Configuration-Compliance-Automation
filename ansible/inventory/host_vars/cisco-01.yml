@@ -1,0 +1,14 @@
+---
+# ============================================================
+# Cisco IOSv - Device Identity
+# ============================================================
+
+device_vendor: cisco
+device_platform: ios
+device_role: core-router
+
+device_management_ip: 192.168.174.200
+
+management_protocol: ssh
+
+automation_enabled: true

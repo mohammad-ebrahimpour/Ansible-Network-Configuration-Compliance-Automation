@@ -1,0 +1,86 @@
+---
+- name: Generate Cisco compliance report
+  hosts: cisco
+  gather_facts: false
+
+  vars:
+    report_dir: "{{ playbook_dir }}/../../reports"
+
+  tasks:
+
+    - name: Read Cisco SSH status
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: ssh_status
+      changed_when: false
+
+    - name: Calculate Cisco controls
+      ansible.builtin.set_fact:
+        ssh_enabled: >-
+          {{
+            'SSH Enabled'
+            in ssh_status.stdout[0]
+          }}
+
+        ssh_version_2: >-
+          {{
+            'SSH Enabled - version 2.0'
+            in ssh_status.stdout[0]
+          }}
+
+    - name: Calculate Cisco overall status
+      ansible.builtin.set_fact:
+        compliance_status: >-
+          {{
+            'COMPLIANT'
+            if ssh_enabled and ssh_version_2
+            else 'DRIFT'
+          }}
+
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0750"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Write Cisco report
+      ansible.builtin.copy:
+        dest: "{{ report_dir }}/cisco-01.json"
+        mode: "0640"
+        content: >-
+          {{
+            {
+              "device": inventory_hostname,
+              "vendor": "Cisco",
+              "platform": "IOS",
+              "management_ip": device_management_ip,
+              "status": compliance_status,
+              "controls": [
+                {
+                  "id": "CISCO-SSH-001",
+                  "name": "SSH Enabled",
+                  "desired": true,
+                  "actual": ssh_enabled,
+                  "status": "COMPLIANT" if ssh_enabled else "DRIFT"
+                },
+                {
+                  "id": "CISCO-SSH-002",
+                  "name": "SSH Version",
+                  "desired": 2,
+                  "actual": 2 if ssh_version_2 else "UNKNOWN",
+                  "status": "COMPLIANT" if ssh_version_2 else "DRIFT"
+                }
+              ]
+            }
+            | to_nice_json
+          }}
+      delegate_to: localhost
+
+    - name: Display Cisco report status
+      ansible.builtin.debug:
+        msg:
+          - "Report generated: reports/cisco-01.json"
+          - "Status: {{ compliance_status }}"

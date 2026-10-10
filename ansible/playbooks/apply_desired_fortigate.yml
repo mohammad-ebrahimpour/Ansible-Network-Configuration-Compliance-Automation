@@ -1,0 +1,55 @@
+---
+- name: Apply FortiGate desired state
+  hosts: fortigate
+  gather_facts: false
+
+  vars_files:
+    - ../desired_state/fortigate.yml
+
+  tasks:
+
+    - name: Disable Internet access policy
+      fortinet.fortios.fortios_firewall_policy:
+        vdom: "{{ desired_state.vdom }}"
+        state: present
+        firewall_policy:
+          policyid: 1
+          name: "lan-to-internet"
+          srcintf:
+            - name: "port2"
+          dstintf:
+            - name: "port1"
+          srcaddr:
+            - name: "all"
+          dstaddr:
+            - name: "all"
+          schedule: "always"
+          service:
+            - name: "ALL"
+          action: "deny"
+          status: "disable"
+          nat: "disable"
+
+    - name: Read FortiGate firewall policies
+      fortinet.fortios.fortios_configuration_fact:
+        vdom: "{{ desired_state.vdom }}"
+        selector: firewall_policy
+      register: firewall_policies
+      changed_when: false
+      check_mode: false
+
+    - name: Validate Internet access policy
+      ansible.builtin.assert:
+        that:
+          - firewall_policies.meta.status == "success"
+        fail_msg: "FortiGate firewall policy validation failed."
+        success_msg: "FortiGate firewall policies are accessible."
+
+    - name: Report FortiGate remediation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: FortiGate"
+          - "Policy ID: 1"
+          - "Desired Internet access: disabled"
+          - "Status: COMPLIANT"

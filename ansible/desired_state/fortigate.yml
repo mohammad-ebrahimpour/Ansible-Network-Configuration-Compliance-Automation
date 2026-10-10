@@ -1,0 +1,22 @@
+---
+desired_state:
+  vendor: fortinet
+  platform: fortios
+
+  vdom: root
+
+  internet_access:
+    enabled: false
+
+  controls:
+    - id: FORTIGATE-INTERNET-001
+      name: Internet Access
+      desired: false
+
+    - id: FORTIGATE-SYSTEM-001
+      name: System Status
+      desired: available
+
+    - id: FORTIGATE-POLICY-001
+      name: Firewall Policies
+      desired: available

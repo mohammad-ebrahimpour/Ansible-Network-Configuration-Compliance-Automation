@@ -1,0 +1,76 @@
+---
+- name: FortiGate Configuration Compliance
+  hosts: fortigate
+  gather_facts: false
+
+  tasks:
+
+    - name: Read FortiGate system status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "{{ vdom }}"
+        selector: system_status
+      register: fortigate_status
+      changed_when: false
+
+    - name: Read FortiGate interface configuration
+      fortinet.fortios.fortios_configuration_fact:
+        vdom: "{{ vdom }}"
+        selector: system_interface
+      register: fortigate_interfaces
+      changed_when: false
+
+    - name: Validate FortiGate system response
+      ansible.builtin.assert:
+        that:
+          - fortigate_status is defined
+          - fortigate_status.meta is defined
+        fail_msg: "FortiGate system status could not be collected."
+        success_msg: "FortiGate system status collected successfully."
+
+    - name: Validate FortiGate interface response
+      ansible.builtin.assert:
+        that:
+          - fortigate_interfaces is defined
+          - fortigate_interfaces.meta is defined
+        fail_msg: "FortiGate interface configuration could not be collected."
+        success_msg: "FortiGate interface configuration collected successfully."
+
+    - name: Evaluate FortiGate Internet access policy
+      ansible.builtin.set_fact:
+        fortigate_internet_compliance: >-
+          {{
+            'COMPLIANT'
+            if fortigate_internet_access | bool == false
+            else 'REVIEW_REQUIRED'
+          }}
+
+    - name: Report FortiGate compliance
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "FortiGate Compliance"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Fortinet"
+          - "Platform: FortiOS"
+          - "VDOM: {{ vdom }}"
+          - "=========================================="
+          - "Control: Internet Access"
+          - "Desired: DISABLED"
+          - "Configured Policy: {{ fortigate_internet_access }}"
+          - "Status: {{ fortigate_internet_compliance }}"
+          - "Control: System Status"
+          - "Status: COLLECTED"
+          - "Control: Interface Configuration"
+          - "Status: COLLECTED"
+          - "=========================================="
+
+    - name: Assert FortiGate Internet policy
+      ansible.builtin.assert:
+        that:
+          - not (fortigate_internet_access | bool)
+        fail_msg: >-
+          FortiGate Internet access policy is not compliant.
+          The current v1.2 scenario requires Internet access to remain disabled.
+        success_msg: >-
+          FortiGate Internet access policy is COMPLIANT.

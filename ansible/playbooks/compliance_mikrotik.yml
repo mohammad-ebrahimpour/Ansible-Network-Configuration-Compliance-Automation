@@ -1,0 +1,59 @@
+---
+- name: MikroTik Configuration Compliance
+  hosts: mikrotik
+  gather_facts: false
+
+  vars:
+    desired_identity: "AnsibleMikrotik"
+
+  tasks:
+
+    - name: Read current router identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: identity_output
+      changed_when: false
+
+    - name: Parse current router identity
+      ansible.builtin.set_fact:
+        actual_identity: >-
+          {{
+            identity_output.stdout_lines[0]
+            | join('')
+            | regex_replace('^name:', '')
+            | regex_replace('[^A-Za-z0-9._-]', '')
+          }}
+
+    - name: Compare router identity
+      ansible.builtin.set_fact:
+        identity_compliance: >-
+          {{
+            'COMPLIANT'
+            if actual_identity == desired_identity
+            else 'DRIFT'
+          }}
+
+    - name: Report MikroTik compliance
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "MikroTik Compliance"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: MikroTik"
+          - "Control: Router Identity"
+          - "Expected: {{ desired_identity }}"
+          - "Actual: {{ actual_identity }}"
+          - "Status: {{ identity_compliance }}"
+          - "=========================================="
+
+    - name: Fail when MikroTik identity is non-compliant
+      ansible.builtin.assert:
+        that:
+          - identity_compliance == 'COMPLIANT'
+        fail_msg: >-
+          MikroTik compliance failed.
+          Expected identity "{{ desired_identity }}",
+          got "{{ actual_identity }}".
+        success_msg: "MikroTik identity is COMPLIANT."

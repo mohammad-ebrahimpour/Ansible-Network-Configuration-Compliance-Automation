@@ -1,0 +1,16 @@
+---
+# ============================================================
+# MikroTik RouterOS
+# ============================================================
+
+ansible_connection: ansible.netcommon.network_cli
+ansible_network_os: community.routeros.routeros
+
+ansible_user: "{{ vault_mikrotik_username }}"
+ansible_password: "{{ vault_mikrotik_password }}"
+
+ansible_network_cli_ssh_type: libssh
+
+ansible_ssh_common_args: >-
+  -o PreferredAuthentications=password
+  -o PubkeyAuthentication=no

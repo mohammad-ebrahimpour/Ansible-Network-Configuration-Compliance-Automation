@@ -1,0 +1,66 @@
+---
+- name: Validate FortiGate desired state
+  hosts: fortigate
+  gather_facts: false
+
+  vars_files:
+    - ../desired_state/fortigate.yml
+
+  tasks:
+
+    - name: Read final FortiGate firewall policies
+      fortinet.fortios.fortios_configuration_fact:
+        vdom: "{{ desired_state.vdom }}"
+        selector: firewall_policy
+      register: firewall_policies
+      changed_when: false
+
+    - name: Validate FortiGate policy collection
+      ansible.builtin.assert:
+        that:
+          - firewall_policies.meta.status == "success"
+        fail_msg: "FortiGate firewall policy collection failed."
+        success_msg: "FortiGate firewall policies successfully collected."
+
+    - name: Find desired policy
+      ansible.builtin.set_fact:
+        desired_policy: >-
+          {{
+            firewall_policies.meta.results
+            | selectattr('policyid', 'equalto', 1)
+            | list
+            | first
+            | default({})
+          }}
+
+    - name: Validate policy exists
+      ansible.builtin.assert:
+        that:
+          - desired_policy | length > 0
+        fail_msg: "FortiGate policy ID 1 was not found."
+        success_msg: "FortiGate policy ID 1 exists."
+
+    - name: Validate Internet access is disabled
+      ansible.builtin.assert:
+        that:
+          - desired_policy.status | default('enable') == 'disable'
+          - desired_policy.action | default('accept') == 'deny'
+        fail_msg: >-
+          FortiGate Internet policy is not disabled correctly.
+          Expected status=disable and action=deny.
+          Actual status={{ desired_policy.status | default('undefined') }},
+          action={{ desired_policy.action | default('undefined') }}
+        success_msg: >-
+          FortiGate Internet access policy is correctly disabled.
+
+    - name: Report FortiGate validation
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Fortinet"
+          - "VDOM: {{ desired_state.vdom }}"
+          - "Policy ID: 1"
+          - "Policy status: {{ desired_policy.status }}"
+          - "Policy action: {{ desired_policy.action }}"
+          - "Internet access: DISABLED"
+          - "Validation: PASSED"

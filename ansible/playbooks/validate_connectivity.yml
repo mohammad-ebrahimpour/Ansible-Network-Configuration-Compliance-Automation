@@ -1,0 +1,62 @@
+---
+- name: Validate MikroTik connectivity
+  hosts: mikrotik
+  gather_facts: false
+
+  tasks:
+    - name: Read MikroTik identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: mikrotik_identity
+      changed_when: false
+
+    - name: Report MikroTik connectivity
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: MikroTik"
+          - "Status: CONNECTED"
+          - "Identity: {{ mikrotik_identity.stdout[0] | trim }}"
+
+
+- name: Validate Cisco connectivity
+  hosts: cisco
+  gather_facts: false
+
+  tasks:
+    - name: Read Cisco version
+      cisco.ios.ios_command:
+        commands:
+          - show version
+      register: cisco_version
+      changed_when: false
+
+    - name: Report Cisco connectivity
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: Cisco IOS"
+          - "Status: CONNECTED"
+          - "Version output received: {{ cisco_version.stdout | length > 0 }}"
+
+
+- name: Validate FortiGate connectivity
+  hosts: fortigate
+  gather_facts: false
+
+  tasks:
+    - name: Read FortiGate system status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "{{ vdom }}"
+        selector: system_status
+      register: fortigate_status
+      changed_when: false
+
+    - name: Report FortiGate connectivity
+      ansible.builtin.debug:
+        msg:
+          - "Device: {{ inventory_hostname }}"
+          - "Vendor: FortiGate"
+          - "Status: CONNECTED"
+          - "System status received: {{ fortigate_status is defined }}"

@@ -1,0 +1,55 @@
+---
+- name: Integrated MikroTik discovery
+  hosts: mikrotik
+  gather_facts: false
+
+  tasks:
+
+    - name: Collect identity
+      community.routeros.command:
+        commands:
+          - /system identity print
+      register: identity
+      changed_when: false
+
+    - name: Collect system resource
+      community.routeros.command:
+        commands:
+          - /system resource print
+      register: resource
+      changed_when: false
+
+    - name: Collect interfaces
+      community.routeros.command:
+        commands:
+          - /interface print
+      register: interfaces
+      changed_when: false
+
+    - name: Collect IP addresses
+      community.routeros.command:
+        commands:
+          - /ip address print
+      register: addresses
+      changed_when: false
+
+    - name: Collect routes
+      community.routeros.command:
+        commands:
+          - /ip route print
+      register: routes
+      changed_when: false
+
+    - name: Build normalized discovery record
+      ansible.builtin.set_fact:
+        normalized_device:
+          device: "{{ inventory_hostname }}"
+          vendor: "MikroTik"
+          platform: "RouterOS"
+          management_ip: "{{ device_management_ip }}"
+          identity: "{{ identity.stdout[0] | trim }}"
+          discovered: true
+
+    - name: Display normalized discovery
+      ansible.builtin.debug:
+        var: normalized_device

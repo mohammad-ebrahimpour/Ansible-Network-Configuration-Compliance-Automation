@@ -1,12 +1,16 @@
+# ============================================================
+# Python
+# ============================================================
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .cache/
 *.retry
-ansible/inventory.local.ini
-ansible/inventory.local.yml
-ansible/vault/
+
+# ============================================================
+# Environment variables and secrets
+# ============================================================
 .env
 .env.*
 *.secret
@@ -15,8 +19,40 @@ ansible/vault/
 *.pem
 *.crt
 *.csr
+
+# ============================================================
+# Ansible local configuration and secrets
+# ============================================================
+ansible/inventory.local.ini
+ansible/inventory.local.yml
+ansible/vault/
+ansible/inventory/secrets.yml
+ansible/inventory/**/secrets.yml
+
+# Ansible Vault password files
+.vault_pass
+.vault-password
+.vault-password.txt
+*.vault
+*.vault.yml
+
+# Local Ansible collections and runtime files
+.ansible/
+
+# ============================================================
+# Generated files and local artifacts
+# ============================================================
 backups/
 .DS_Store
 
+# ============================================================
+# Archived and temporary project files
+# ============================================================
 _archive/
 FINAL_MIGRATION.md
+
+# Generated runtime reports
+reports/*.json
+inventory.local.ini
+ansible/inventory/group_vars/all/local.yml
+output/
