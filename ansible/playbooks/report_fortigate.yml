@@ -62,7 +62,7 @@
       ansible.builtin.copy:
         dest: "{{ report_dir }}/fortigate-01.json"
         mode: "0640"
-        content: >-
+        content:
           {{
             {
               "device": inventory_hostname,
